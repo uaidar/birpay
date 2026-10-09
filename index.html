@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="ky">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>BirPay</title>
+<!-- async: на медленном интернете страница видна сразу, не ждёт скрипт Telegram -->
+<script async src="https://telegram.org/js/telegram-web-app.js" onload="window.tgInit ? tgInit() : (window.__tgLoaded = true)"></script>
+<style>
+/* Цвета берутся из темы Telegram (--tg-theme-*), запасные — для обычного браузера */
+:root{
+  --bg: var(--tg-theme-bg-color, #ffffff);
+  --bg2: var(--tg-theme-secondary-bg-color, #f1f4f6);
+  --text: var(--tg-theme-text-color, #14212b);
+  --hint: var(--tg-theme-hint-color, #56636d);
+  --link: var(--tg-theme-link-color, #0e6b73);
+  --btn: var(--tg-theme-button-color, #0e6b73);
+  --btn-text: var(--tg-theme-button-text-color, #ffffff);
+  --red: #b03024; --red-bg: rgba(192,57,43,.12);
+  --amber: #7d5000; --amber-bg: rgba(214,150,20,.16);
+  --green: #1d6b41; --green-bg: rgba(46,139,87,.14);
+  --line: rgba(127,140,150,.24);
+}
+/* Тёмная тема Telegram: смысловые цвета светлее, чтобы читались на тёмном фоне */
+:root[data-theme="dark"]{ --red:#ff8a7a; --red-bg:rgba(255,110,90,.16); --amber:#f2c35b; --amber-bg:rgba(242,195,91,.15);
+  --green:#6fd39a; --green-bg:rgba(111,211,154,.15); }
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg2);color:var(--text);font:17px/1.45 -apple-system,"Segoe UI",Roboto,system-ui,sans-serif}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;padding:0;text-align:left}
+button:focus-visible{outline:3px solid var(--link);outline-offset:2px}
+#app{max-width:520px;margin:0 auto;min-height:100vh;padding:12px 14px 150px}
+.top{display:flex;justify-content:space-between;align-items:center;min-height:36px;margin-bottom:4px}
+.back{color:var(--link);font-size:17px;min-height:44px;padding:0 8px 0 0}
+.lang{font-size:15px;color:var(--link);border:1px solid var(--line);border-radius:999px;padding:0 16px;min-height:44px;background:var(--bg)}
+h1{font-size:24px;line-height:1.2;margin:4px 0 4px}
+.sub{color:var(--hint);font-size:16px;margin:0 0 14px}
+.card{background:var(--bg);border-radius:16px;padding:16px;margin-bottom:12px}
+.stack{display:flex;flex-direction:column;gap:10px}
+.hint{color:var(--hint);font-size:15px}
+.big{font-size:34px;font-weight:700;letter-spacing:-.5px;font-variant-numeric:tabular-nums;line-height:1.15}
+.row{display:flex;align-items:center;gap:12px;background:var(--bg);border-radius:16px;padding:16px;width:100%;min-height:80px}
+.row.alert{box-shadow:inset 0 0 0 2px var(--red)}
+.row .mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.row .mid b{font-size:17px;font-weight:600}
+.row .chev{color:var(--hint);font-size:28px;line-height:1}
+.amt{font-weight:700;font-size:20px;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;font-size:15px;font-weight:600;padding:4px 12px;border-radius:999px}
+.pill.red{background:var(--red-bg);color:var(--red)}
+.pill.amber{background:var(--amber-bg);color:var(--amber)}
+.pill.green{background:var(--green-bg);color:var(--green)}
+.pill.grey{background:var(--bg2);color:var(--hint)}
+.kv{display:flex;flex-direction:column;gap:2px;padding:12px 0;border-bottom:1px solid var(--line)}
+.kv:last-child{border-bottom:0;padding-bottom:0}
+.kv:first-child{padding-top:0}
+.kv span{color:var(--hint);font-size:15px}
+.kv b{font-weight:600;font-size:18px;font-variant-numeric:tabular-nums}
+.nw{white-space:nowrap}
+.split{font-size:15px;color:var(--hint);margin-top:4px}
+.more{color:var(--link);font-size:16px;min-height:48px;margin-top:4px;width:100%}
+.sch{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:16px;font-variant-numeric:tabular-nums}
+.sch:last-of-type{border-bottom:0}
+.call{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.call a{color:var(--link);font-weight:600;text-decoration:none;font-size:17px;white-space:nowrap;min-height:44px;display:inline-flex;align-items:center}
+.sec{font-size:15px;color:var(--hint);margin:16px 4px 8px}
+.bank.last{box-shadow:inset 0 0 0 2px var(--btn)}
+.bank.other{background:transparent;box-shadow:inset 0 0 0 2px var(--line)}
+.amount-row{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
+.amount-row .lnk{color:var(--link);font-size:16px;min-height:44px;white-space:nowrap}
+.amount-in{display:flex;gap:8px;align-items:center}
+.amount-in input{flex:1;min-width:0;font:inherit;font-size:30px;font-weight:700;border:0;border-bottom:2px solid var(--btn);background:transparent;color:var(--text);padding:2px 0;outline:none}
+.amount-in button{background:var(--btn);color:var(--btn-text);border-radius:10px;padding:0 18px;min-height:48px;font-size:19px;font-weight:700}
+.note{border-radius:12px;padding:10px 12px;font-size:15px;margin-top:10px}
+.note.warn{background:var(--amber-bg);color:var(--amber)}
+.note.err{background:var(--red-bg);color:var(--red)}
+.note.info{background:var(--bg2);color:var(--hint)}
+.qrbox{background:#fff;border-radius:16px;padding:14px;margin:0 auto;width:max-content;position:relative}
+.qrbox canvas{display:block;width:200px;height:200px;image-rendering:pixelated}
+.qrbox .tag{position:absolute;left:50%;bottom:-10px;transform:translateX(-50%);background:#9a6200;color:#fff;font-size:12px;padding:2px 10px;border-radius:6px;letter-spacing:.06em}
+ol.how{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px;counter-reset:h}
+ol.how li{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:start;counter-increment:h;font-size:17px}
+ol.how li::before{content:counter(h);width:28px;height:28px;border-radius:50%;background:var(--btn);color:var(--btn-text);display:grid;place-items:center;font-weight:700;font-size:15px}
+.tick{width:84px;height:84px;border-radius:50%;background:var(--green-bg);color:var(--green);display:grid;place-items:center;font-size:44px;font-weight:700;margin:14px auto 6px}
+.spin{width:56px;height:56px;border-radius:50%;border:5px solid var(--line);border-top-color:var(--btn);margin:20px auto 8px;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+.center{text-align:center}
+.bottom{position:fixed;left:0;right:0;bottom:0;padding:12px 14px calc(14px + env(safe-area-inset-bottom,0px));background:linear-gradient(transparent,var(--bg2) 22%)}
+.bottom .in{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
+.main{width:100%;min-height:58px;border-radius:14px;background:var(--btn);color:var(--btn-text);font-size:19px;font-weight:600;text-align:center;padding:8px 12px}
+.main[disabled]{opacity:.45}
+.second{width:100%;min-height:48px;border-radius:14px;background:var(--bg);color:var(--link);font-size:17px;font-weight:600;text-align:center}
+.toast{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);background:rgba(20,33,43,.94);color:#fff;padding:10px 16px;border-radius:12px;font-size:15px;max-width:90%;text-align:center;z-index:5}
+.demo{font-size:13px;color:var(--hint);text-align:center;margin-top:14px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ===================== НАСТРОЙКИ ===================== */
+// Ссылки на оплату в приложениях банков. Пусто — банк не открывается (в прототипе).
+// {amount} и {contract} подставятся сами.
+const BANK_LINKS = { dcb: '' };
+const DEMO_TODAY = '2026-10-02';       // «сегодня» для демо-данных
+const DEMO_CONFIRM_MS = 2500;          // через сколько демо «подтверждает» поступление денег
+
+/* ===================== ДЕМО-ДАННЫЕ ===================== */
+// Условные данные. В пилоте всё это приходит из реестра МФО.
+// schedule — даты всех платежей, paid — сколько первых платежей уже оплачено,
+// penalty — пеня по просроченным платежам (сумму даёт МФО).
+function monthly(firstIso, n){
+  const [y,m,d] = firstIso.split('-').map(Number), out = [];
+  for (let i=0;i<n;i++){
+    const yy = y + Math.floor((m-1+i)/12), mm = (m-1+i)%12;
+    const last = new Date(Date.UTC(yy, mm+1, 0)).getUTCDate();
+    out.push(`${yy}-${String(mm+1).padStart(2,'0')}-${String(Math.min(d,last)).padStart(2,'0')}`);
+  }
+  return out;
+}
+const AKSUU = () => ({ id:'AS', mfo:'МКК «Ак-Суу Финанс»', phone:'+996 312 00 00 01', contract:'АС-0425-3310',
+  payment:6200, schedule:monthly('2026-04-30',12), paid:5, penalty:124 });
+const TULPAR = () => ({ id:'TM', mfo:'МФО «Тулпар Микро»', phone:'+996 312 00 00 02', contract:'ТМ-0526-1847',
+  payment:4500, schedule:monthly('2026-06-05',12), paid:4, penalty:0 });
+const DEMO_SETS = {
+  main:  () => [AKSUU(), TULPAR()],
+  one:   () => [TULPAR()],
+  none:  () => [],
+  late2: () => [Object.assign(AKSUU(), { paid:4, penalty:620 })],
+  last:  () => [Object.assign(TULPAR(), { schedule:monthly('2025-11-05',12), paid:11 })]
+};
+const CLIENT = { first:'Айбек' };
+const BANKS = [
+  { id:'mbank', name:'MBank' }, { id:'dcb', name:'DCB 360' }, { id:'obank', name:'О!Банк' },
+  { id:'optima', name:'Оптима Банк' }, { id:'bakai', name:'Бакай Банк' }
+];
+
+/* ===================== ТЕКСТЫ ===================== */
+// Кыргызский текст нужно вычитать носителю языка.
+const MONTHS = {
+  ky:['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'],
+  ru:['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря']
+};
+const T = {
+  ky:{
+    title:'BirPay', other:'Русский', hello:n=>`Саламатсызбы, ${n}!`, pick:'Насыяны тандаңыз',
+    none:'Азыр сизде төлөй турган насыя жок.', som:'сом', back:'‹ Артка',
+    late:n=>`${n} күн кечикти`, left:n=>`${n} күн калды`, today:'Бүгүн акыркы күн',
+    until:d=>`${d.replace(/ь$/,'')}га чейин`, noneHelp:'Насыяңыз бар болсо, МФОңузга чалыңыз.', close:'Жабуу',
+    payNow:'Азыр төлөңүз', payUntil:d=>`${d.replace(/ь$/,'')}га чейин төлөңүз`,
+    split:(p,f)=>`${p} төлөм + ${f} айып`, then:'Андан кийин', lastPay:'Төлөм жок, насыя жабылат',
+    toClose:'Насыя жабылганга чейин', nPays:n=>`${n} төлөм`, all:n=>`Бардык төлөмдөр (${n})`, hide:'Жашыруу',
+    paid:'Төлөндү', unpaid:'Кечикти', soon:'Күтүлүүдө', contract:'Келишим', ask:'Суроо болсо',
+    payBtn:a=>`Төлөө · ${a}`, payTitle:'Төлөм', howMuch:'Канча төлөйсүз', otherSum:'Башка сумма',
+    sumEmpty:'Сумманы жазыңыз', sumMax:m=>`Бул сумма насыянын калганынан көп. Эң көбү: ${m}`,
+    sumLessLate:d=>`Бул сумма ${d}дон аз. Кечигүү жабылбайт.`, sumLess:d=>`Бул сумма ${d}дон аз. Төлөм толук болбойт.`,
+    sumMore:'Ашыкчасы кийинки төлөмдөргө кетет.',
+    whichBank:'Кайсы банк аркылуу төлөйсүз?', lastUsed:'Акыркы жолу ушул банк', otherBank:'Башка банк',
+    otherBankHint:'QR-код менен төлөө',
+    inBank:b=>`${b} ачылат`, inBankSteps:b=>[`${b} ачылганда, төлөмдү ырастаңыз`,'Ушул жерге кайтып, «Мен төлөдүм» басыңыз'],
+    demoNoOpen:'Демо: банк ачылбайт, ырастоону элестетиңиз.', iPaid:'Мен төлөдүм', notOpened:b=>`${b} ачылган жок`,
+    qrTitle:'QR-код менен төлөө', qrSteps:['QR-кодду сактаңыз','Банк приложениесинде «QR менен төлөө» → «Галереядан» тандаңыз','Ушул жерге кайтып, «Мен төлөдүм» басыңыз'],
+    saveQr:'QR-кодду сактоо', sample:'ҮЛГҮ', qrSaved:'Прототипте QR сакталбайт',
+    checking:'Текшерип жатабыз', slow:'Акча али түшө элек. Банктын приложениесинде төлөм өттүбү, текшериңиз. Өтсө, акча түшкөндө билдиребиз.', notThrough:'Төлөм өткөн жок, кайра төлөйм', checkingHint:'Акча түшкөндө ушул жерде жана чатта билдиребиз. Терезени жапсаңыз болот.',
+    done:'Акча түштү', stillDue:a=>`Дагы ${a} төлөө керек. Кечигүү жабыла элек.`, stillDueSoft:a=>`Бул төлөм боюнча дагы ${a} калды.`,
+    closed:'Насыя толук жабылды!', chatNote:'«Даяр» басканда чек чатка келет.', demoConfirmed:'Демо: төлөм шарттуу ырасталды.',
+    ready:'Даяр', toList:'Насыяларыма', demo:'Прототип. Маалыматтар шарттуу.'
+  },
+  ru:{
+    title:'BirPay', other:'Кыргызча', hello:n=>`Здравствуйте, ${n}!`, pick:'Выберите займ',
+    none:'Сейчас у вас нет займов к оплате.', som:'сом', back:'‹ Назад',
+    late:n=>`просрочка ${n} дн.`, left:n=>`осталось ${n} дн.`, today:'Сегодня последний день',
+    until:d=>`до ${d}`, noneHelp:'Если займ у вас есть, позвоните в свою МФО.', close:'Закрыть',
+    payNow:'Оплатите сейчас', payUntil:d=>`Оплатите до ${d}`,
+    split:(p,f)=>`${p} платёж + ${f} пеня`, then:'Следующий', lastPay:'Платежей нет, займ закроется',
+    toClose:'До закрытия займа', nPays:n=>`${n} ${plural(n,'платёж','платежа','платежей')}`, all:n=>`Все платежи (${n})`, hide:'Скрыть',
+    paid:'Оплачен', unpaid:'Просрочен', soon:'Ожидается', contract:'Договор', ask:'Есть вопрос',
+    payBtn:a=>`Оплатить · ${a}`, payTitle:'Оплата', howMuch:'Сколько платите', otherSum:'Другая сумма',
+    sumEmpty:'Напишите сумму', sumMax:m=>`Сумма больше остатка по займу. Максимум: ${m}`,
+    sumLessLate:d=>`Это меньше ${d}. Просрочка не закроется.`, sumLess:d=>`Это меньше ${d}. Платёж будет неполным.`,
+    sumMore:'Лишнее пойдёт в счёт следующих платежей.',
+    whichBank:'Через какой банк платите?', lastUsed:'Платили в прошлый раз', otherBank:'Другой банк',
+    otherBankHint:'Оплатить по QR-коду',
+    inBank:b=>`Открываем ${b}`, inBankSteps:b=>[`Подтвердите платёж в ${b}`,'Вернитесь сюда и нажмите «Я оплатил»'],
+    demoNoOpen:'Демо: банк не открывается, представьте подтверждение.', iPaid:'Я оплатил', notOpened:b=>`${b} не открылся`,
+    qrTitle:'Оплата по QR-коду', qrSteps:['Сохраните QR-код','В приложении банка выберите «Оплата по QR» → «Из галереи»','Вернитесь сюда и нажмите «Я оплатил»'],
+    saveQr:'Сохранить QR-код', sample:'ОБРАЗЕЦ', qrSaved:'В прототипе QR не сохраняется',
+    checking:'Проверяем', slow:'Деньги ещё не поступили. Проверьте в приложении банка, прошёл ли платёж. Если прошёл — сообщим, когда деньги поступят.', notThrough:'Платёж не прошёл, оплачу снова', checkingHint:'Когда деньги поступят, сообщим здесь и в чате. Окно можно закрыть.',
+    done:'Деньги поступили', stillDue:a=>`Нужно доплатить ${a}. Просрочка ещё не закрыта.`, stillDueSoft:a=>`По этому платежу осталось ${a}.`,
+    closed:'Займ полностью погашен!', chatNote:'После «Готово» чек придёт в чат.', demoConfirmed:'Демо: платёж подтверждён условно.',
+    ready:'Готово', toList:'К моим займам', demo:'Прототип. Данные условные.'
+  }
+};
+function plural(n,a,b,c){ const m10=n%10, m100=n%100; return m10===1&&m100!==11?a:(m10>=2&&m10<=4&&(m100<10||m100>=20)?b:c); }
+
+/* ===================== СОСТОЯНИЕ ===================== */
+const params = new URLSearchParams(location.search);
+let tg = null, inTelegram = false;
+const fromKeyboard = () => inTelegram && !(tg.initDataUnsafe && tg.initDataUnsafe.query_id);
+const TODAY = params.get('today') || DEMO_TODAY;
+const CONFIRM_MS = Number(params.get('confirm_ms') || DEMO_CONFIRM_MS);
+let LOANS = (DEMO_SETS[params.get('set')] || DEMO_SETS.main)();
+// Память на телефоне (в пилоте — на сервере ДКБ)
+const SET = params.get('set') || 'main';
+function load(k, d){ try{ const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } }
+function save(k, v){ try{ v === null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+const savedLang = load('langPref', null), urlLt = Number(params.get('lt') || 0);
+let lang = savedLang && savedLang.ts > urlLt ? savedLang.lang : (params.get('lang') === 'ru' ? 'ru' : 'ky');
+const PAY_KEY = `payments:${SET}:${TODAY}`, PENDING_KEY = `pending:${SET}:${TODAY}`;
+const SLOW_MS = 60000;   // через сколько объяснить, что деньги ещё не пришли
+let slowTimer = null, confirmTimer = null, navAt = 0;
+let stack = [], view = { name:'home' }, showAll = false;
+let pay = null;          // { loanId, amount, editing, msg, bank }
+let lastPayment = null;  // результат последней подтверждённой оплаты
+window.__ev = [];        // журнал событий (для автотестов)
+const ev = (type, data) => window.__ev.push(Object.assign({ type, view: view.name }, data || {}));
+
+const t = () => T[lang];
+const fmt = n => Math.round(n).toLocaleString('ru-RU').replace(/\s/g,' ');
+const money = n => `${fmt(n)} ${t().som}`;
+const dn = iso => Date.UTC(+iso.slice(0,4), +iso.slice(5,7)-1, +iso.slice(8,10)) / 864e5;
+function date(iso){ const m = MONTHS[lang][+iso.slice(5,7)-1], d = +iso.slice(8,10), y = iso.slice(0,4);
+  const base = lang==='ky' ? `${d}-${m}` : `${d} ${m}`;
+  if (y === TODAY.slice(0,4)) return base;
+  return lang==='ky' ? `${y}-ж. ${base}` : `${base} ${y} г.`; }
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function haptic(k){ try{ tg && tg.HapticFeedback && (k ? tg.HapticFeedback.notificationOccurred(k) : tg.HapticFeedback.impactOccurred('light')); }catch(e){} }
+function toast(msg){ const d=document.createElement('div'); d.className='toast'; d.setAttribute('role','status'); d.textContent=msg; document.body.appendChild(d); setTimeout(()=>d.remove(),2400); }
+function getLastBank(){ try{ return localStorage.getItem('lastBank') || 'mbank'; }catch(e){ return 'mbank'; } }
+function setLastBank(id){ try{ localStorage.setItem('lastBank', id); }catch(e){} }
+
+/* Всё, что видит клиент, считается из графика — одно место правды */
+function calc(l){
+  const unpaid = l.schedule.slice(l.paid);
+  const pastDue = unpaid.filter(d => dn(d) < dn(TODAY));
+  const credit = l.credit || 0;                       // частичная оплата, ещё не закрывшая платёж
+  const dueRaw = pastDue.length ? pastDue.length * l.payment + l.penalty : (unpaid.length ? l.payment : 0);
+  const due = Math.max(0, dueRaw - credit);
+  const dueDate = pastDue.length ? pastDue[0] : unpaid[0];
+  const overdue = pastDue.length ? dn(TODAY) - dn(pastDue[0]) : 0;
+  const daysLeft = !pastDue.length && unpaid.length ? dn(unpaid[0]) - dn(TODAY) : null;
+  const coversCount = pastDue.length || (unpaid.length ? 1 : 0);
+  const after = unpaid[coversCount] || null;
+  const totalLeft = Math.max(0, unpaid.length * l.payment + (pastDue.length ? l.penalty : 0) - credit);
+  return { unpaid, pastDue, due, dueRaw, dueDate, overdue, daysLeft, after, totalLeft, coversCount, closed: unpaid.length === 0 };
+}
+const active = () => LOANS.filter(l => !calc(l).closed);
+const loanById = id => LOANS.find(l => l.id === id);
+
+function statusPill(c){
+  if (c.overdue) return `<span class="pill red">${t().late(c.overdue)}</span>`;
+  if (c.daysLeft === 0) return `<span class="pill amber">${t().today}</span>`;
+  if (c.daysLeft <= 5) return `<span class="pill amber">${t().left(c.daysLeft)}</span>`;
+  return `<span class="pill grey">${t().until(date(c.dueDate))}</span>`;
+}
+
+/* Применяем подтверждённую оплату к займу (в пилоте это делает МФО) */
+function applyPayment(l, amount){
+  let c = calc(l), rest = amount + (l.credit || 0);
+  l.credit = 0;
+  while (rest > 0 && !c.closed){
+    if (rest >= c.dueRaw){ rest -= c.dueRaw; l.paid += c.coversCount; l.penalty = 0; c = calc(l); }
+    else { l.credit = rest; rest = 0; }
+  }
+}
+
+/* ===================== НАВИГАЦИЯ ===================== */
+function go(next){ haptic(); stack.push(view); view = next; showAll = false; navAt = Date.now(); render(); window.scrollTo(0,0); }
+function back(){ haptic(); view = stack.pop() || { name:'home' }; navAt = Date.now(); render(); window.scrollTo(0,0); }
+function toRoot(){ stack = []; view = { name:'home' }; navAt = Date.now(); render(); window.scrollTo(0,0); }
+// Второе касание быстрее 0,3 сек после смены экрана — случайное (дрожит рука, тормозит телефон)
+document.addEventListener('click', e => { if (Date.now() - navAt < 300){ e.stopPropagation(); e.preventDefault(); } }, true);
+
+function tgInit(){
+  if (tg || !(window.Telegram && window.Telegram.WebApp)) return;
+  tg = window.Telegram.WebApp; inTelegram = !!tg.initData;
+  try{ tg.ready(); tg.expand(); tg.BackButton.onClick(back); if (tg.colorScheme === 'dark') document.documentElement.dataset.theme = 'dark'; }catch(e){}
+  render();
+}
+
+/* ===================== ЭКРАНЫ ===================== */
+const isRoot = () => stack.length === 0;
+function header(){
+  const backBtn = !isRoot() && !inTelegram ? `<button class="back" onclick="back()">${t().back}</button>` : '<span></span>';
+  const langBtn = isRoot() ? `<button class="lang" onclick="toggleLang()">${t().other}</button>` : '<span></span>';
+  return `<div class="top">${backBtn}${langBtn}</div>`;
+}
+const bottom = html => `<div class="bottom"><div class="in">${html}</div></div>`;
+
+function homeScreen(){
+  const a = active();
+  if (a.length === 1 && isRoot()){ view = { name:'loan', id:a[0].id }; return loanScreen(); }
+  if (!a.length) return `${header()}<h1>${t().hello(CLIENT.first)}</h1><div class="card">${t().none}<p class="hint" style="margin:8px 0 0">${t().noneHelp}</p></div><div class="demo">${t().demo}</div>
+    ${bottom(`<button class="main" onclick="closeApp()">${t().close}</button>`)}`;
+  const rows = a.map(l => ({ l, c: calc(l) }))
+    .sort((x,y) => (y.c.overdue - x.c.overdue) || (dn(x.c.dueDate) - dn(y.c.dueDate)))
+    .map(({l,c}) => `
+    <button class="row ${c.overdue ? 'alert' : ''}" data-loan="${l.id}" onclick="go({name:'loan',id:'${l.id}'})">
+      <div class="mid"><b>${esc(l.mfo)}</b><span class="amt">${money(c.due)}</span><span>${statusPill(c)}</span></div>
+      <div class="chev" aria-hidden="true">›</div>
+    </button>`).join('');
+  return `${header()}<h1>${t().hello(CLIENT.first)}</h1><p class="sub">${t().pick}</p>
+    <div class="stack">${rows}</div><div class="demo">${t().demo}</div>`;
+}
+
+function loanScreen(){
+  const l = loanById(view.id), c = calc(l);
+  if (c.closed) return `${header()}<h1>${esc(l.mfo)}</h1><div class="card"><span class="pill green">${t().closed}</span></div>`;
+  const sched = l.schedule.map((d,i) => {
+    const st = i < l.paid ? `<span class="pill green">${t().paid}</span>`
+             : dn(d) < dn(TODAY) ? `<span class="pill red">${t().unpaid}</span>` : `<span class="hint">${t().soon}</span>`;
+    return `<div class="sch"><span class="nw">${d.slice(8,10)}.${d.slice(5,7)}.${d.slice(0,4)}</span><span class="nw">${money(l.payment)}</span>${st}</div>`;
+  });
+  const shown = showAll ? sched : sched.slice(Math.max(0, l.paid - 1), l.paid + 2);
+  return `${header()}
+    <h1>${esc(l.mfo)}</h1><p class="sub">${t().contract}: ${esc(l.contract)}</p>
+    <div class="card">
+      <div class="hint">${c.overdue ? t().payNow : t().payUntil(date(c.dueDate))}</div>
+      <div class="big">${money(c.due)}</div>
+      ${c.overdue && l.penalty && !l.credit ? `<div class="split">${t().split(money(c.pastDue.length * l.payment), money(l.penalty))}</div>` : ''}
+      ${c.overdue || c.daysLeft <= 5 ? `<div style="margin-top:8px">${statusPill(c)}</div>` : ''}
+    </div>
+    <div class="card">
+      <div class="kv"><span>${t().then}</span><b>${c.after ? `<span class="nw">${date(c.after)}</span> · <span class="nw">${money(l.payment)}</span>` : t().lastPay}</b></div>
+      <div class="kv"><span>${t().toClose}</span><b><span class="nw">${t().nPays(c.unpaid.length)}</span> · <span class="nw">${money(c.totalLeft)}</span></b></div>
+    </div>
+    <div class="card">${shown.join('')}
+      <button class="more" onclick="showAll=!showAll;render()">${showAll ? t().hide : t().all(l.schedule.length)}</button></div>
+    <div class="card call"><span class="hint">${t().ask}</span><a href="tel:${l.phone.replace(/\s/g,'')}">${esc(l.phone)}</a></div>
+    <div class="demo">${t().demo}</div>
+    ${bottom(`<button class="main" id="payBtn" onclick="startPay('${l.id}')">${t().payBtn(money(c.due))}</button>`)}`;
+}
+
+function startPay(id){ pay = { loanId:id, amount: calc(loanById(id)).due, editing:false, msg:null, bank:null }; ev('startPay',{loan:id}); go({ name:'pay' }); }
+
+function amountMsg(){
+  const c = calc(loanById(pay.loanId));
+  if (pay.amount < c.due) return { cls:'warn', text: c.overdue ? t().sumLessLate(money(c.due)) : t().sumLess(money(c.due)) };
+  if (pay.amount > c.due) return { cls:'info', text: t().sumMore };
+  return null;
+}
+
+function payScreen(){
+  const l = loanById(pay.loanId);
+  const last = getLastBank();
+  const banks = [...BANKS].sort((a,b) => (b.id===last) - (a.id===last));
+  const amount = pay.editing
+    ? `<div class="amount-in"><input id="amt" inputmode="numeric" autocomplete="off" value="${pay.amount}" aria-label="${t().howMuch}"
+         onkeydown="if(event.key==='Enter')saveAmount()"><button onclick="saveAmount()">OK</button></div>`
+    : `<div class="amount-row"><div class="big">${money(pay.amount)}</div><button class="lnk" onclick="editAmount()">${t().otherSum}</button></div>`;
+  const msg = pay.msg || (!pay.editing && amountMsg());
+  const bankRows = banks.map(b => `
+    <button class="row bank ${b.id===last?'last':''}" data-bank="${b.id}" ${pay.editing?'disabled':''} onclick="chooseBank('${b.id}')">
+      <div class="mid"><b>${b.name}</b>${b.id===last ? `<span class="hint">${t().lastUsed}</span>` : ''}</div><div class="chev" aria-hidden="true">›</div></button>`).join('');
+  return `${header()}
+    <h1>${t().payTitle}</h1><p class="sub">${esc(l.mfo)}</p>
+    <div class="card"><div class="hint">${t().howMuch}</div>${amount}
+      ${msg ? `<div class="note ${msg.cls}" role="status">${msg.text}</div>` : ''}</div>
+    <div class="sec">${t().whichBank}</div>
+    <div class="stack">${bankRows}
+      <button class="row bank other" data-bank="qr" ${pay.editing?'disabled':''} onclick="go({name:'qr'})"><div class="mid"><b>${t().otherBank}</b><span class="hint">${t().otherBankHint}</span></div><div class="chev" aria-hidden="true">›</div></button>
+    </div>`;
+}
+
+function editAmount(){ pay.editing = true; pay.msg = null; render(); setTimeout(()=>{ const i=document.getElementById('amt'); if(i){ i.focus(); i.select(); } },50); }
+function saveAmount(){
+  const c = calc(loanById(pay.loanId));
+  const v = parseInt(String(document.getElementById('amt').value).replace(/\D/g,''), 10);
+  if (!v){ pay.msg = { cls:'err', text:t().sumEmpty }; render(); return; }
+  if (v > c.totalLeft){ pay.msg = { cls:'err', text:t().sumMax(money(c.totalLeft)) }; render(); return; }
+  pay.amount = v; pay.editing = false; pay.msg = null; ev('amount',{amount:v}); render();
+}
+
+function chooseBank(id){
+  const b = BANKS.find(x => x.id === id), l = loanById(pay.loanId);
+  pay.bank = b; setLastBank(id); ev('bank',{bank:id});
+  const link = BANK_LINKS[id];
+  if (link){
+    const url = link.replace('{amount}', pay.amount).replace('{contract}', encodeURIComponent(l.contract));
+    try{ tg && inTelegram ? tg.openLink(url) : window.open(url, '_blank'); }catch(e){}
+  }
+  go({ name:'bank', linked: !!link });
+}
+
+function bankScreen(){
+  const b = pay.bank.name, s = t().inBankSteps(b);
+  return `${header()}<h1>${t().inBank(b)}</h1><p class="sub">${money(pay.amount)} · ${esc(loanById(pay.loanId).mfo)}</p>
+    <div class="card"><ol class="how">${s.map(x=>`<li>${x}</li>`).join('')}</ol>
+    ${view.linked ? '' : `<div class="note info">${t().demoNoOpen}</div>`}</div>
+    ${bottom(`<button class="main" id="iPaid" onclick="userSaysPaid()">${t().iPaid}</button>
+              <button class="second" onclick="go({name:'qr'})">${t().notOpened(b)}</button>`)}`;
+}
+
+function qrScreen(){
+  return `${header()}<h1>${t().qrTitle}</h1><p class="sub">${money(pay.amount)} · ${esc(loanById(pay.loanId).mfo)}</p>
+    <div class="card"><div class="qrbox"><canvas id="qr" width="33" height="33" aria-label="QR"></canvas><span class="tag">${t().sample}</span></div></div>
+    <div class="card"><ol class="how">${t().qrSteps.map(x=>`<li>${x}</li>`).join('')}</ol></div>
+    ${bottom(`<button class="main" onclick="toast(t().qrSaved)">${t().saveQr}</button>
+              <button class="second" id="iPaid" onclick="userSaysPaid()">${t().iPaid}</button>`)}`;
+}
+
+/* Клиент говорит «я оплатил» — это НЕ подтверждение. Ждём поступления денег. */
+function userSaysPaid(){
+  ev('userSaysPaid');
+  save(PENDING_KEY, { loanId: pay.loanId, amount: pay.amount, bank: pay.bank ? pay.bank.name : null, ts: Date.now() });
+  stack = []; view = { name:'checking' }; render(); window.scrollTo(0,0);
+  waitForMoney(CONFIRM_MS, SLOW_MS);
+}
+// Демо: условное поступление денег. В пилоте сигнал приходит с сервера ДКБ.
+function waitForMoney(confirmIn, slowIn){
+  clearTimeout(confirmTimer); clearTimeout(slowTimer);
+  confirmTimer = setTimeout(() => confirmPayment('demo'), Math.max(0, confirmIn));
+  slowTimer = setTimeout(() => { if (view.name === 'checking'){ view.slow = true; render(); } }, Math.max(0, slowIn));
+}
+// Клиент говорит, что платёж в банке не прошёл: снимаем ожидание и возвращаем к оплате
+function cancelPending(){
+  clearTimeout(confirmTimer); clearTimeout(slowTimer); save(PENDING_KEY, null); ev('cancelPending');
+  const id = pay.loanId; stack = active().length > 1 ? [{ name:'home' }, { name:'loan', id }] : [{ name:'loan', id }];
+  pay = { loanId:id, amount: calc(loanById(id)).due, editing:false, msg:null, bank:null };
+  view = { name:'pay' }; navAt = Date.now(); render();
+}
+
+/* Единственное место, где оплата считается состоявшейся */
+function confirmPayment(source){
+  if (view.name !== 'checking' || !pay) return;
+  const l = loanById(pay.loanId), before = calc(l);
+  clearTimeout(slowTimer); save(PENDING_KEY, null);
+  save(PAY_KEY, load(PAY_KEY, []).concat([{ loanId: l.id, amount: pay.amount }]));
+  applyPayment(l, pay.amount);
+  const after = calc(l);
+  lastPayment = { loanId:l.id, amount:pay.amount, bank: pay.bank ? pay.bank.name : 'QR', source,
+                  partial: pay.amount < before.due, wasOverdue: before.overdue > 0, after };
+  ev('confirmed', { amount: pay.amount, source });
+  haptic('success');
+  view = { name:'done' }; stack = []; render(); window.scrollTo(0,0);
+}
+
+function checkingScreen(){
+  return `<div class="top"></div><div class="spin" aria-hidden="true"></div>
+    <h1 class="center">${t().checking}</h1><p class="sub center">${money(pay.amount)} · ${esc(loanById(pay.loanId).mfo)}</p>
+    <div class="card center">${t().checkingHint}</div>
+    ${view.slow ? `<div class="note warn" role="status">${t().slow}</div>
+      ${bottom(`<button class="second" onclick="cancelPending()">${t().notThrough}</button>`)}` : ''}`;
+}
+
+function doneScreen(){
+  const p = lastPayment, l = loanById(p.loanId), c = p.after;
+  let next;
+  if (c.closed) next = `<div class="kv"><span class="pill green">${t().closed}</span></div>`;
+  else if (p.partial) next = `<div class="note warn">${p.wasOverdue ? t().stillDue(money(c.due)) : t().stillDueSoft(money(c.due))}</div>`;
+  else next = `<div class="kv"><span>${t().then}</span><b><span class="nw">${date(c.dueDate)}</span> · <span class="nw">${money(c.due)}</span></b></div>`;
+  return `<div class="top"></div><div class="tick" aria-hidden="true">✓</div>
+    <h1 class="center">${t().done}</h1><p class="sub center">${esc(l.mfo)}</p>
+    <div class="card center"><div class="big">${money(p.amount)}</div></div>
+    <div class="card">${next}</div>
+    ${fromKeyboard() ? `<p class="sub center">${t().chatNote}</p>` : ''}
+    ${p.source === 'demo' ? `<div class="demo">${t().demoConfirmed}</div>` : ''}
+    ${bottom(`<button class="main" id="readyBtn" onclick="finish()">${t().ready}</button>`)}`;
+}
+
+/* «Готово»: если приложение открыто кнопкой клавиатуры — отправляем боту данные для чека */
+function finish(){
+  const p = lastPayment, l = loanById(p.loanId), c = p.after;
+  const payload = { type:'paid', mfo:l.mfo, contract:l.contract, amount:p.amount, bank:p.bank, lang,
+                    partial:p.partial, rest: p.partial ? c.due : 0, closed:c.closed,
+                    next: (!p.partial && !c.closed) ? { date:c.dueDate, amount:c.due } : null };
+  ev('finish', { fromKeyboard: fromKeyboard() });
+  if (inTelegram){
+    try{ if (fromKeyboard()){ tg.sendData(JSON.stringify(payload)); return; } }catch(e){}
+    try{ tg.close(); return; }catch(e){}
+  }
+  toRoot();
+}
+
+function closeApp(){ try{ if (inTelegram){ tg.close(); return; } }catch(e){} toast(t().demo); }
+function toggleLang(){ lang = lang === 'ky' ? 'ru' : 'ky'; save('langPref', { lang, ts: Math.floor(Date.now()/1000) }); document.documentElement.lang = lang; ev('lang',{lang}); render(); }
+
+/* ===================== ОТРИСОВКА ===================== */
+function render(){
+  const screens = { home:homeScreen, loan:loanScreen, pay:payScreen, bank:bankScreen, qr:qrScreen, checking:checkingScreen, done:doneScreen };
+  document.getElementById('app').innerHTML = (screens[view.name] || homeScreen)();
+  document.title = t().title;
+  document.body.dataset.view = view.name;
+  if (tg){ try{ (!isRoot() && view.name !== 'checking' && view.name !== 'done') ? tg.BackButton.show() : tg.BackButton.hide(); }catch(e){} }
+  if (view.name === 'qr') drawQr();
+}
+
+// Образец QR (не настоящий платёжный код)
+function drawQr(){
+  const cv = document.getElementById('qr'); if (!cv) return;
+  const x = cv.getContext('2d'), n = 33; let s = 20261002;
+  const r = () => (s = (s * 1103515245 + 12345) % 2147483648) / 2147483648;
+  x.fillStyle = '#fff'; x.fillRect(0,0,n,n); x.fillStyle = '#0f1a22';
+  const inF = (i,j) => (i<8&&j<8)||(i>n-9&&j<8)||(i<8&&j>n-9);
+  for (let i=0;i<n;i++) for (let j=0;j<n;j++){ if (!inF(i,j) && r() < .48) x.fillRect(i,j,1,1); }
+  [[0,0],[n-7,0],[0,n-7]].forEach(([px,py]) => { for (let i=0;i<7;i++) for (let j=0;j<7;j++){
+    const on = i===0||i===6||j===0||j===6||(i>1&&i<5&&j>1&&j<5); x.fillStyle = on ? '#0f1a22' : '#fff'; x.fillRect(px+i,py+j,1,1); } });
+}
+
+/* Старт: из напоминания бот открывает сразу оплату (?screen=pay&loan=TM) */
+(function start(){
+  load(PAY_KEY, []).forEach(x => { const ln = loanById(x.loanId); if (ln) applyPayment(ln, x.amount); });
+  const pend = load(PENDING_KEY, null);
+  if (pend && loanById(pend.loanId)){
+    // Клиент закрыл приложение на «Проверяем» и открыл снова — продолжаем ждать, а не предлагаем платить ещё раз
+    pay = { loanId: pend.loanId, amount: pend.amount, editing:false, msg:null, bank: pend.bank ? { name: pend.bank } : null };
+    view = { name:'checking' }; render();
+    const passed = Date.now() - pend.ts;
+    waitForMoney(CONFIRM_MS - passed, SLOW_MS - passed);
+    if (window.__tgLoaded || window.Telegram) tgInit();
+    return;
+  }
+  const sc = params.get('screen'), l = loanById(params.get('loan'));
+  if (sc === 'pay' && l && !calc(l).closed){
+    stack = active().length > 1 ? [{ name:'home' }, { name:'loan', id:l.id }] : [{ name:'loan', id:l.id }];
+    pay = { loanId:l.id, amount: calc(l).due, editing:false, msg:null, bank:null };
+    view = { name:'pay' };
+  } else if (l){ stack = active().length > 1 ? [{ name:'home' }] : []; view = { name:'loan', id:l.id }; }
+  render();
+  if (window.__tgLoaded || window.Telegram) tgInit();
+})();
+</script>
+</body>
+</html>
